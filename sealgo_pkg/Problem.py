@@ -21,6 +21,13 @@ class Action(ABC):
         return self.__hash__() == other.__hash__()
 
 class SearchProblem(ABC):
+    '''
+    initial_state: State
+    actions: (State) -> list[Action]
+    result: (State, Action) -> State
+    is_goal: (State) -> bool
+    action_cost: (State, Action) -> float
+    '''
     @abstractmethod
     def initial_state(self) -> State:
         """Return the initial state from which the problem is to be solved."""
@@ -43,7 +50,6 @@ class SearchProblem(ABC):
         """Check if the given state is a goal state."""
         pass
 
-    @abstractmethod
     def action_cost(self, s: State, action: Action) -> float:
         """Return the cost of taking action from state to another state."""
         return 1
@@ -55,6 +61,11 @@ class HeuristicSearchProblem(SearchProblem):
         pass
     
 class EightQueens(HeuristicSearchProblem):
+    class QState(State, tuple[int]):
+        
+        def __str__(self):
+            return '\n'.join(' '.join('Q' if j == i else '.' for j in range(len(self.state))) for i in range(len(self.state)))
+        
     def __init__(self, n: int = 8):
         """
         Initialize the eight queens problem with the scale.
