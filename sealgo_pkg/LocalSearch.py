@@ -9,6 +9,8 @@ class LocalSearch(Search):
     @abstractmethod
     def __init__(self, problem: SearchProblem, max_iter: int = 1000):
         super().__init__(problem)
+        self.state = problem.initial_state()
+        self.cost = 0
         self.max_iter = max_iter
         
     @abstractmethod

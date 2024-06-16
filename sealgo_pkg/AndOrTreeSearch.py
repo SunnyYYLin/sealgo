@@ -34,6 +34,3 @@ class AndOrTreeSearch(GlobalSearch):
 
         # If it's a leaf node, return the heuristic value, else return the action
         return best_value if best_action is None else best_action
-    
-    def draw_tree(self):
-        
