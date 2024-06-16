@@ -1,12 +1,13 @@
 from abc import ABC, abstractmethod
+from typing import List
 
 class State(ABC):
     '''
     __hash__: () -> int
     __eq__: (State) -> bool
     '''
-    def __init__(self):
-        self.cost = 0
+    def __init__(self, cost:int=0):
+        self.cost = cost
         
     @abstractmethod
     def __hash__(self):
@@ -75,4 +76,9 @@ class HeuristicSearchProblem(SearchProblem):
     @abstractmethod
     def heuristic(self, state: State) -> float:
         """Return the heuristic value of the given state."""
+        pass
+    
+class UncertainSearchProblem(SearchProblem):
+    @abstractmethod
+    def result(self, state: State, action: Action) -> List[tuple[State, float]]:
         pass

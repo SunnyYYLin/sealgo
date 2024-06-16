@@ -1,7 +1,8 @@
-from Problem import HeuristicSearchProblem, State, Action
+from Problem import HeuristicSearchProblem, UncertainSearchProblem, State, Action
 import itertools
 import random
 from functools import lru_cache
+from typing import List, Tuple, Optional
 
 MAX_CACHE = 100000
 
@@ -197,6 +198,58 @@ class TicTacToe(HeuristicSearchProblem):
         
         # Count patterns
         return sum(1 for line in lines if line.count(player) == count and line.count(' ') == self.scale - count)
+    
+class RobotSearchProblem(UncertainSearchProblem):
+    class RS(State):
+        def __init__(self, position, cost=0):
+            super().__init__(cost)
+            self.position = position
+
+        def __hash__(self):
+            return hash(self.position)
+
+        def __eq__(self, other):
+            return self.position == other.position
+
+    class RA(Action):
+        def __init__(self, direction):
+            self.direction = direction
+            
+        def __hash__(self):
+            return hash(self.direction)
+        
+        def __eq__(self, other):
+            return self.direction == other.direction
+            
+    def initial_state(self) -> State:
+        return self.RS((0, 0))
+
+    def actions(self, state: RS) -> List[RA]:
+        return [self.RA('north'), self.RA('south'), self.RA('east'), self.RA('west')]
+
+    def is_goal(self, state: RS) -> bool:
+        return state.position == (10, 10)
+
+    def result(self, state: RS, action: RA) -> List[Tuple[State, float]]:
+        # Simplified transition model with 80% success and 20% stay in place
+        new_position = self.calculate_new_position(state.position, action.direction)
+        state.cost += self.action_cost(state, action)
+        return [(self.RS(new_position, state.cost), 0.8), 
+                (state, 0.2)]
+        
+    def heuristic(self, state: RS) -> int:
+        return abs(state.position[0] - 10) + abs(state.position[1] - 10)
+
+    def calculate_new_position(self, position, direction):
+        x, y = position
+        if direction == 'north':
+            return (x, y+1)
+        elif direction == 'south':
+            return (x, y-1)
+        elif direction == 'east':
+            return (x+1, y)
+        elif direction == 'west':
+            return (x-1, y)
 
 if __name__ == '__main__':
     problem = EightQueens()

@@ -1,9 +1,10 @@
 from abc import abstractmethod
 from collections.abc import Callable
 from SearchAlgo import Search
-from Problem import SearchProblem, State, Action
+from Problem import SearchProblem, HeuristicSearchProblem, State, Action
 import random
 from math import exp
+from typing import Optional
 
 class LocalSearch(Search):
     @abstractmethod
@@ -33,7 +34,7 @@ class HillClimbing(LocalSearch):
         is_end = self.problem.heuristic(self.problem.result(self.state, action)) >= self.problem.heuristic(self.state)
         return action, is_end
     
-    def search(self):
+    def search(self) -> Optional[State]:
         """
         Execute a hill climbing search algorithm to find a solution to the given problem.
         Returns a solution or indicates failure.
@@ -50,7 +51,7 @@ class HillClimbing(LocalSearch):
             if not chosen_action:
                 continue
             self.state = self.problem.result(self.state, chosen_action)
-        return self.problem.is_goal(self.state)
+        return self.state if self.problem.is_goal(self.state) else None
     
 class StochasticHillClimbing(HillClimbing):
     def __init__(self, problem: SearchProblem, max_iter: int = 1000, p: Callable = lambda x: 0.5):
@@ -102,7 +103,7 @@ class RandomRestart(LocalSearch):
         self.algorithm = algorithm
         self.algorithm.max_iter = max_iter
         
-    def search(self):
+    def search(self) -> Optional[State]:
         """
         Execute a random restart on a certain search algorithm to find a solution to the given problem.
         """
@@ -117,7 +118,7 @@ class RandomRestart(LocalSearch):
                 self.state = self.algorithm.state
                 self.cost = self.algorithm.cost
                 
-        return self.problem.is_goal(self.state)
+        return self.state if self.problem.is_goal(self.state) else None
     
 class LocalBeamSearch(LocalSearch):
     def __init__(self, problem: SearchProblem, k:int=8, max_iter: int = 1000):
@@ -128,7 +129,7 @@ class LocalBeamSearch(LocalSearch):
         self.k = k
         self.states = [problem.initial_state() for _ in range(k)]
         
-    def search(self):
+    def search(self) -> Optional[State]:
         """
         Execute a local beam search algorithm to find a solution to the given problem.
         Returns a solution or indicates failure.
@@ -143,8 +144,8 @@ class LocalBeamSearch(LocalSearch):
             self.states = sorted(new_states, key=lambda x: self.problem.heuristic(x))[:self.k]
             if any(self.problem.is_goal(state) for state in self.states):
                 self.state = next(filter(lambda x: self.problem.is_goal(x), self.states))
-                return True
-        return False
+                return state
+        return None
 
 class GeneticAlgorithm(LocalSearch):
     def __init__(self, problem: SearchProblem, max_iter: int = 1000, pop_size: int = 100, mutation_rate: float = 0.1):
@@ -174,7 +175,7 @@ class GeneticAlgorithm(LocalSearch):
         """
         raise NotImplementedError("Mutation operation not implemented.")
         
-    def search(self):
+    def search(self) -> Optional[State]:
         """
         Execute a genetic algorithm to find a solution to the given problem.
         Returns a solution or indicates failure.
@@ -194,9 +195,31 @@ class GeneticAlgorithm(LocalSearch):
                 return True
         return False
     
+class LRTSAStar(LocalSearch):
+    ''' Learning Real-time A* Algorithm '''
+    def __init__(self, problem: HeuristicSearchProblem, max_iter: int = 100000, pop_size: int = 100, mutation_rate: float = 0.1):
+        super().__init__(problem, max_iter)
+        self.approx_costs = {}
+        
+    def approx_h(self, state: State) -> int:
+        if state not in self.approx_costs:
+            self.approx_costs[state] = problem.heuristic(state)
+        return self.approx_costs[state]
+        
+    def search(self) -> Optional[State]:
+        for _ in range(self.max_iter):
+            if self.problem.is_goal(self.state):
+                return self.state
+            actions = self.problem.actions(self.state)
+            if not actions:
+                return None
+            action = min(actions, key=lambda n: self.approx_h(self.problem.result(self.state, n)))
+            self.state = self.problem.result(self.state, action)
+            self.approx_costs[self.state] += self.state.cost
+        return self.state if self.problem.is_goal(self.state) else None
+    
 if __name__ == '__main__':
     from ExampleProblem import EightQueens
     problem = EightQueens(8)
-    algo = LocalBeamSearch(problem)
-    algo.search()
-    print(algo.states[0])
+    algo = LRTSAStar(problem)
+    print(algo.search())
