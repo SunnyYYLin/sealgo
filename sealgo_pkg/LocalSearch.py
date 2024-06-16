@@ -62,12 +62,13 @@ class StochasticHillClimbing(HillClimbing):
         super().__init__(problem, max_iter)
         self.p = p
         
-    def hill_climbing(self, actions: list[Action]) -> tuple[Action, bool]:
+    def climb(self, actions: list[Action]) -> tuple[Action, bool]:
         action = random.choice(actions)
         slope = self.problem.heuristic(self.problem.result(self.state, action)) - self.problem.heuristic(self.state)
-        if slope <= 0:
+        if slope >= 0:
             prob = self.p(slope)
             if random.random() > prob:
+                print(f"reject: {slope}")
                 action = None
         return action, False
     

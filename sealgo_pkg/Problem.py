@@ -1,9 +1,13 @@
 from abc import ABC, abstractmethod
 
 class State(ABC):
+    '''
+    __hash__: () -> int
+    __eq__: (State) -> bool
+    '''
     def __init__(self):
         self.cost = 0
-    
+        
     @abstractmethod
     def __hash__(self):
         pass
@@ -13,6 +17,10 @@ class State(ABC):
         return self.__hash__() == other.__hash__()
     
 class Action(ABC):
+    '''
+    __hash__: () -> int
+    __eq__: (Action) -> bool
+    '''
     @abstractmethod
     def __hash__(self):
         pass
@@ -56,6 +64,14 @@ class SearchProblem(ABC):
         return 1
     
 class HeuristicSearchProblem(SearchProblem):
+    '''
+    initial_state: State
+    actions: (State) -> list[Action]
+    result: (State, Action) -> State
+    is_goal: (State) -> bool
+    action_cost: (State, Action) -> float
+    heuristic: (State) -> float
+    '''
     @abstractmethod
     def heuristic(self, state: State) -> float:
         """Return the heuristic value of the given state."""
