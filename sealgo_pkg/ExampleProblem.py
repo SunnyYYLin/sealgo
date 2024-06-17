@@ -1,4 +1,4 @@
-from Problem import HeuristicSearchProblem, UncertainSearchProblem, State, Action
+from Problem import *
 import itertools
 import random
 from functools import lru_cache
@@ -87,24 +87,24 @@ class EightQueens(HeuristicSearchProblem):
         return n_conflict_pairs
     
 class TicTacToe(HeuristicSearchProblem):
-    stone = ['X', 'O']
-    player = {'X': 0, 'O': 1}
-    
-    class TS(State):
-        def __init__(self, board:list, latest_player_num:int, cost:int=0):
-            '''board is an n*n list of string "X" or "O", palyer_n: {0:"X", 1:"O"}'''
+    class TS(GameState):
+        def __init__(self, board:List[List[str]], to_move:str, cost:int=0):
+            '''board is an n*n list of string "X" or "O"'''
+            super().__init__(cost, to_move)
             self.board = board
-            self.player_n = latest_player_num
-            self.cost = cost
         
         def __hash__(self):
             '''convert list into tuple to hash it'''
-            return hash((tuple(self.board), self.player))
+            return hash(tuple(map(tuple, self.board)))
         
         def __eq__(self, other):
-            return self.board == other.board and self.player == other.player
+            return self.board == other.board
         
-    class TA(Action, tuple[int, int]):
+        def __str__(self):
+            return '\n'.join(' '.join(self.board[i][j] for j in range(len(self.board))) 
+                             for i in range(len(self.board)))
+        
+    class TA(GameAction):
         '''drop at (TAction[0], TAction[1])'''
         pass
         
@@ -119,14 +119,14 @@ class TicTacToe(HeuristicSearchProblem):
         """
         Return the initial state of the Tic-Tac-Toe problem.
         """
-        return self.TState([['' for _ in range(self.scale)] for _ in range(self.scale)], 1) # player for latest move
+        return self.TS([['.' for _ in range(self.scale)] for _ in range(self.scale)], 'O')
     
-    def actions(self, state: TS):
+    def actions(self, state: TS) -> List[TA]:
         """
         Return the actions that can be executed in the given state.
         """
         actions = [(i, j) for i, j in itertools.product(range(self.scale), range(self.scale)) 
-                   if state.board[i][j] == '']
+                   if state.board[i][j] == '.']
         # Considering symmetry for simplicity.
         state_set = set()
         reduced_actions = set()
@@ -135,7 +135,7 @@ class TicTacToe(HeuristicSearchProblem):
             state = self.result(state, action)
             for _ in range(4):
                 state = self.rotate(state)
-                if state[0] not in state_set:
+                if state not in state_set:
                     state_set.add(state)
                     is_new = True
                 r_state = self.reflect(state)
@@ -146,22 +146,24 @@ class TicTacToe(HeuristicSearchProblem):
                 reduced_actions.add(action)
         return list(reduced_actions)
     
-    def result(self, state:TS, action:TA):
+    def result(self, state:TS, action:TA) -> TS:
         """
         Return the state that results from executing a given action in the given state.
         """
-        state.player_n = 1 - state.player_n
-        state.board[action[0], action[1]] = stone[player_n]
+        state.to_move = 'X' if state.to_move == 'O' else 'O'
+        state.board[action[0]][action[1]] = state.to_move
+        state.cost += self.action_cost(state, action)
+        return state
         
-    def is_goal(self, state):
+    def is_goal(self, state) -> bool:
         """
         Check if the given state is a goal state.
         """
         return self.count_patterns(state, self.players[0], self.scale) > 0 \
                 or self.count_patterns(state, self.players[1], self.scale) > 0 \
-                or state.count(' ') == 0
+                or sum(state.board[i].count('') for i in range(self.scale)) == 0
     
-    def heuristic(self, state):
+    def heuristic(self, state) -> int:
         """
         Return the heuristic value of the given state.
         """
@@ -177,11 +179,11 @@ class TicTacToe(HeuristicSearchProblem):
             O1 = self.count_patterns(state, 'O', 1)
             return 3*X2 + X1 - (3*O2 + O1)
     
-    def rotate(self, state):
-        return (tuple(tuple(state[0][j][-i] for j in range(self.scale)) for i in range(self.scale)), state[1])
+    def rotate(self, state) -> TS:
+        return self.TS([list(reversed(row)) for row in zip(*state.board)], state.to_move)
     
-    def reflect(self, state):
-        return (tuple(tuple(state[0][i][j] for j in range(self.scale-1, -1, -1)) for i in range(self.scale)), state[1])
+    def reflect(self, state) -> TS:
+        return self.TS([list(reversed(row)) for row in state.board], state.to_move)
     
     @lru_cache(maxsize=MAX_CACHE)
     def count_patterns(self, state:State, player:int, count:int) -> int:
@@ -189,15 +191,21 @@ class TicTacToe(HeuristicSearchProblem):
         Count the number of rows, columns, and diagonals with exactly 'count' number of 'player' marks.
         """
         lines = []
+
+        # 添加所有行
+        lines.extend(state.board)
+
+        # 添加所有列
+        for col in range(self.scale):
+            lines.append(tuple(state.board[row][col] for row in range(self.scale)))
+
+        # 添加主对角线
+        lines.append(tuple(state.board[i][i] for i in range(self.scale)))
+
+        # 添加副对角线
+        lines.append(tuple(state.board[i][self.scale - 1 - i] for i in range(self.scale)))
         
-        # Rows and columns
-        
-        
-        # Diagonals
-        
-        
-        # Count patterns
-        return sum(1 for line in lines if line.count(player) == count and line.count(' ') == self.scale - count)
+        return sum(1 for line in lines if line.count(player) == count and line.count('.') == self.scale - count)
     
 class RobotSearchProblem(UncertainSearchProblem):
     class RS(State):

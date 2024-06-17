@@ -82,3 +82,15 @@ class UncertainSearchProblem(SearchProblem):
     @abstractmethod
     def result(self, state: State, action: Action) -> List[tuple[State, float]]:
         pass
+    
+class GameState(State):
+    @abstractmethod
+    def __init__(self, cost: int = 0, to_move: str = None):
+        super().__init__(cost)
+        self.to_move = to_move
+        
+class GameAction(Action):
+    @abstractmethod
+    def __init__(self, cost: int = 0, player: str = None):
+        super().__init__(cost)
+        self.player = player
