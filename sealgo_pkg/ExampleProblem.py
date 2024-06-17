@@ -155,23 +155,21 @@ class TicTacToe(HeuristicSearchProblem):
         state.cost += self.action_cost(state, action)
         return state
         
-    def is_goal(self, state) -> bool:
+    def is_goal(self, state) -> Optional[str]:
         """
-        Check if the given state is a goal state.
+        Check if the given state is a goal state. Return player who wins.
         """
-        return self.count_patterns(state, self.players[0], self.scale) > 0 \
-                or self.count_patterns(state, self.players[1], self.scale) > 0 \
-                or sum(state.board[i].count('') for i in range(self.scale)) == 0
+        for player in self.players:
+            if self.count_patterns(state, player, self.scale) > 0:
+                return player
+        if all(state.board[i][j] != '.' for i, j in itertools.product(range(self.scale), range(self.scale))):
     
-    def heuristic(self, state) -> int:
+    def heuristic(self, state:TS, player:str) -> int:
         """
         Return the heuristic value of the given state.
         """
         if self.is_goal(state):
-            for player in self.players:
-                if self.count_patterns(state, player, 3) > 0:
-                    return 1 if player == 'X' else -1
-            return 0
+            
         else:
             X2 = self.count_patterns(state, 'X', 2)
             X1 = self.count_patterns(state, 'X', 1)

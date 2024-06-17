@@ -50,6 +50,7 @@ if __name__ == '__main__':
     from ExampleProblem import TicTacToe
     problem = TicTacToe()
     init = problem.initial_state()
+    init.board[0][0] = 'X'
     print(init)
     minimax = Minimax(problem, init)
     print(minimax.search())
