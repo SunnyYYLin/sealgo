@@ -95,14 +95,15 @@ class TicTacToe(HeuristicSearchProblem):
         
         def __hash__(self):
             '''convert list into tuple to hash it'''
-            return hash(tuple(map(tuple, self.board)))
+            return hash(self.__str__())
         
         def __eq__(self, other):
             return self.board == other.board
         
         def __str__(self):
-            return '\n'.join(' '.join(self.board[i][j] for j in range(len(self.board))) 
-                             for i in range(len(self.board)))
+            return '\n'.join(' '.join(self.board[i][j] if self.board[i][j] != '.' else '.' for j in range(len(self.board))) 
+                             for i in range(len(self.board))) \
+                                #  + f'\n{self.to_move} to move'
         
     class TA(GameAction):
         '''drop at (TAction[0], TAction[1])'''
@@ -129,31 +130,32 @@ class TicTacToe(HeuristicSearchProblem):
                    if state.board[i][j] == '.']
         # Considering symmetry for simplicity.
         state_set = set()
-        reduced_actions = set()
+        reduced_actions = []
         for action in actions:
-            is_new = False
-            state = self.result(state, action)
-            for _ in range(4):
-                state = self.rotate(state)
-                if state not in state_set:
-                    state_set.add(state)
-                    is_new = True
-                r_state = self.reflect(state)
-                if r_state not in state_set:
-                    state_set.add(state)
-                    is_new = True
-            if is_new:
-                reduced_actions.add(action)
-        return list(reduced_actions)
+            # 每次计算结果时，都应从原始状态开始
+            new_state = self.result(state, action)
+            # 检查新状态及其所有对称形态是否都是新的
+            new_states = [new_state]
+            new_states.append(self.reflect(new_state))
+            for _ in range(3):
+                new_state = self.rotate(new_state)
+                new_states.append(new_state)
+                new_states.append(self.reflect(new_state))
+            
+            # 如果所有变形都是新的，则考虑这个动作
+            if not any(s in state_set for s in new_states):
+                reduced_actions.append(action)
+                state_set.update(new_states)  # 将所有新变形加入已知集合
+                
+        return reduced_actions
     
     def result(self, state:TS, action:TA) -> TS:
         """
         Return the state that results from executing a given action in the given state.
         """
-        state.to_move = 'X' if state.to_move == 'O' else 'O'
-        state.board[action[0]][action[1]] = state.to_move
-        state.cost += self.action_cost(state, action)
-        return state
+        next_state = self.TS([row.copy() for row in state.board], 'X' if state.to_move == 'O' else 'O', state.cost + 1)
+        next_state.board[action[0]][action[1]] = state.to_move
+        return next_state
         
     def is_goal(self, state) -> Optional[str]:
         """
@@ -163,19 +165,24 @@ class TicTacToe(HeuristicSearchProblem):
             if self.count_patterns(state, player, self.scale) > 0:
                 return player
         if all(state.board[i][j] != '.' for i, j in itertools.product(range(self.scale), range(self.scale))):
+            return 'T'
+        return None
     
     def heuristic(self, state:TS, player:str) -> int:
         """
         Return the heuristic value of the given state.
         """
-        if self.is_goal(state):
-            
+        if self.is_goal(state) == player:
+            return 100
+        elif self.is_goal(state) == 'T':
+            return 0
         else:
             X2 = self.count_patterns(state, 'X', 2)
             X1 = self.count_patterns(state, 'X', 1)
             O2 = self.count_patterns(state, 'O', 2)
             O1 = self.count_patterns(state, 'O', 1)
-            return 3*X2 + X1 - (3*O2 + O1)
+            coef = 1 if player == 'X' else -1
+            return coef * (3*X2 + X1 - (3*O2 + O1))
     
     def rotate(self, state) -> TS:
         return self.TS([list(reversed(row)) for row in zip(*state.board)], state.to_move)
