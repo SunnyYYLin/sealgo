@@ -65,14 +65,14 @@ class SearchProblem(ABC):
         return 1
     
 class HeuristicSearchProblem(SearchProblem):
-    '''
+    """
     initial_state: State
     actions: (State) -> list[Action]
     result: (State, Action) -> State
     is_goal: (State) -> bool
     action_cost: (State, Action) -> float
-    heuristic: (State) -> float
-    '''
+    heuristic(State) -> float: the target function to MINIMIZE
+    """
     @abstractmethod
     def heuristic(self, state: State) -> float:
         """Return the heuristic value of the given state."""
