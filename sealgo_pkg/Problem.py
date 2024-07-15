@@ -3,8 +3,14 @@ from typing import List
 
 class State(ABC):
     '''
-    __hash__: () -> int
-    __eq__: (State) -> bool
+    Represents a state in the problem domain.
+
+    Attributes:
+        cost (int): The cost associated with the state.
+
+    Methods:
+        __hash__(): Computes the hash value of the state.
+        __eq__(other): Compares the state with another state for equality.
     '''
     def __init__(self, cost:int=0):
         self.cost = cost
@@ -19,8 +25,7 @@ class State(ABC):
     
 class Action(ABC):
     '''
-    __hash__: () -> int
-    __eq__: (Action) -> bool
+    
     '''
     @abstractmethod
     def __hash__(self):

@@ -94,23 +94,49 @@ class SimulatedAnnealing(StochasticHillClimbing):
         return p_annealing
         
 class RandomRestart(LocalSearch):
-    def __init__(self, problem: SearchProblem, algorithm: LocalSearch, max_iter: int = 1000, restarts: int = 10):
+    """Restart at different random initial states to avoid local optima.
+    
+    This class represents a random restart algorithm that restarts the search process at different random initial states in order to avoid getting stuck in local optima. It inherits from the `LocalSearch` class.
+    
+    Attributes:
+        problem (SearchProblem): The problem to solve.
+        algorithm (LocalSearch): The search algorithm to use in each restart.
+        max_iter (int): The maximum number of iterations in each restart.
+        max_restarts (int): The maximum number of restarts.
+    
+    Methods:
+        __init__(self, problem: SearchProblem, algorithm: LocalSearch, max_iter: int = 1000, max_restarts: int = 10)
+        search(self) -> Optional[State]
+    """
+    def __init__(self, problem: SearchProblem, algorithm: LocalSearch, max_iter: int = 1000, max_restarts: int = 10):
         """
-        Initialize the random restart search algorithm with the given problem, maximum number of iterations, and number of restarts.
+        Initialize a RandomRestart object.
+        
+        Args:
+            problem (SearchProblem): The problem to solve.
+            algorithm (LocalSearch): The search algorithm to use in each restart.
+            max_iter (int, optional): The maximum number of iterations in each restart. Defaults to 1000.
+            max_restarts (int, optional): The maximum number of restarts. Defaults to 10.
         """
         super().__init__(problem, max_iter)
-        self.restarts = restarts
+        self.max_restarts = max_restarts
         self.algorithm = algorithm
         self.algorithm.max_iter = max_iter
         
     def search(self) -> Optional[State]:
         """
         Execute a random restart on a certain search algorithm to find a solution to the given problem.
+        
+        Returns:
+            Optional[State]: The final state if a goal state is found, otherwise None.
+        
+        Raises:
+            ValueError: If the problem of the algorithm is different from the problem of the search.
         """
         if self.problem != self.algorithm.problem:
             raise ValueError("The problem of the algorithm must be the same as the problem of the search.")
 
-        for _ in range(self.restarts):
+        for _ in range(self.max_restarts):
             self.algorithm.state = self.problem.initial_state()
             self.algorithm.cost = 0
             self.algorithm.search()
