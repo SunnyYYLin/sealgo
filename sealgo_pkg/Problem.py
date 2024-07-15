@@ -31,13 +31,17 @@ class Action(ABC):
         return self.__hash__() == other.__hash__()
 
 class SearchProblem(ABC):
-    '''
-    initial_state: State
-    actions: (State) -> list[Action]
-    result: (State, Action) -> State
-    is_goal: (State) -> bool
-    action_cost: (State, Action) -> float
-    '''
+    """
+    An abstract class representing a search problem.
+    
+    Methods:
+        initial_state(self) -> State: Return the initial state from which the problem is to be solved.
+        actions(self, state: State) -> list: Return a list of actions that can be executed in the given state.
+        result(self, state: State, action: Action) -> State: Return the state that results from executing a given action in the given state.
+        is_goal(self, state: State) -> bool: Check if the given state is a goal state.
+        action_cost(self, s: State, action: Action) -> int|float: Return the cost of taking action from state to another state.
+    """
+    
     @abstractmethod
     def initial_state(self) -> State:
         """Return the initial state from which the problem is to be solved."""
@@ -60,18 +64,21 @@ class SearchProblem(ABC):
         """Check if the given state is a goal state."""
         pass
 
-    def action_cost(self, s: State, action: Action) -> float:
+    def action_cost(self, s: State, action: Action) -> int|float:
         """Return the cost of taking action from state to another state."""
         return 1
     
 class HeuristicSearchProblem(SearchProblem):
     '''
-    initial_state: State
-    actions: (State) -> list[Action]
-    result: (State, Action) -> State
-    is_goal: (State) -> bool
-    action_cost: (State, Action) -> float
-    heuristic: (State) -> float
+    A class representing a heuristic search problem.
+    
+    Methods:
+        initial_state(self) -> State: Return the initial state from which the problem is to be solved.
+        actions(self, state: State) -> list: Return a list of actions that can be executed in the given state.
+        result(self, state: State, action: Action) -> State: Return the state that results from executing a given action in the given state.
+        is_goal(self, state: State) -> bool: Check if the given state is a goal state.
+        action_cost(self, s: State, action: Action) -> int|float: Return the cost of taking action from state to another state.
+        heuristic(state: State) -> float: Returns the heuristic value of the given state.
     '''
     @abstractmethod
     def heuristic(self, state: State) -> float:

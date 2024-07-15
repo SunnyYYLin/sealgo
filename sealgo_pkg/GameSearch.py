@@ -8,6 +8,9 @@ import matplotlib.image as mpimg
 from networkx.drawing.nx_pydot import to_pydot
         
 class Minimax(Search):
+    """
+    UNFINISHED
+    """
     def __init__(self, problem: HeuristicSearchProblem, init: GameState, depth: int = 3):
         super().__init__(problem)
         self.state = init

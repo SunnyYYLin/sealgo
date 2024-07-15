@@ -6,8 +6,6 @@ from queue import PriorityQueue, Queue, LifoQueue
 class BestFirstSearch(Search):
     def __init__(self, problem:SearchProblem, eval_f = lambda x: x.cost, qtype = PriorityQueue):
         '''
-        self.frontier = PriorityQueue(), 
-        but actually it will be realized in different ways like stack, queue, etc.
         '''
         super().__init__(problem)
         self.reached = {}
