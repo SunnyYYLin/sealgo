@@ -1,251 +1,199 @@
 from abc import abstractmethod
 from collections.abc import Callable
-from SearchAlgo import Search
-from Problem import SearchProblem, HeuristicSearchProblem, State, Action
+from sealgo.sealgo_pkg.Search import Search
+from .Problem import HeuristicSearchProblem, State, Action
 import random
 from math import exp
-from typing import Optional
+from typing import List, Type
+from tqdm import tqdm
 
 class LocalSearch(Search):
     @abstractmethod
-    def __init__(self, problem: SearchProblem, max_iter: int = 1000):
-        super().__init__(problem)
+    def __init__(self, problem: HeuristicSearchProblem, max_iter: int = 1000) -> None:
+        self.problem = problem
         self.state = problem.initial_state()
+        self.solution: List[Action] = []
         self.max_iter = max_iter
         
     @abstractmethod
-    def search(self) -> bool:
-        """
-        Execute a local search algorithm to find a solution to the given problem.
-        Returns a solution or indicates failure.
-        """
+    def search(self) -> List[List[Action]]:
         pass
     
 class HillClimbing(LocalSearch):
-    def __init__(self, problem: SearchProblem, max_iter: int = 1000):
-        """
-        Initialize the hill climbing search algorithm with the given problem and maximum number of iterations.
-        """
+    def __init__(self, problem: HeuristicSearchProblem, max_iter: int = 1000) -> None:
         super().__init__(problem, max_iter)
     
-    def climb(self, actions: list[Action]) -> tuple[Action, bool]:
+    def climb(self, actions: list[Action]) -> Action|None:
         """Execute a hill climbing search algorithm pattern to return an action and decide whether to end."""
-        action = min(actions, key=lambda n: self.problem.heuristic(self.problem.result(self.state, n)))
-        is_end = self.problem.heuristic(self.problem.result(self.state, action)) >= self.problem.heuristic(self.state)
-        return action, is_end
+        action = min(actions, key=lambda a: self.problem.heuristic(self.problem.result(self.state.__copy__(), a)))
+        print(f"From:\n{self.state}\nTo:\n{self.problem.result(self.state.__copy__(), action)}\n")
+        h_before = self.problem.heuristic(self.state)
+        h_after = self.problem.heuristic(self.problem.result(self.state.__copy__(), action))
+        print(f"Before: {h_before}, After: {h_after}")
+        slope = h_after - h_before
+        if slope >= 0:
+            return None
+        return action
     
-    def search(self) -> Optional[State]:
-        """
-        Execute a hill climbing search algorithm to find a solution to the given problem.
-        Returns a solution or indicates failure.
-        """
+    def search(self) -> List[List[Action]]:
         for _ in range(self.max_iter):
-            if self.problem.is_goal(self.state):
-                break
             actions = self.problem.actions(self.state)
             if not actions:
-                break
-            chosen_action, is_end = self.climb(actions)
-            if is_end:
-                break
+                return []
+            chosen_action = self.climb(actions)
             if not chosen_action:
-                continue
+                return []
+            print(f"Solution: {chosen_action}\nFrom:\n{self.state}To:\n{self.problem.result(self.state.__copy__(), chosen_action)}\n")
             self.state = self.problem.result(self.state, chosen_action)
-        return self.state if self.problem.is_goal(self.state) else None
+            self.solution.append(chosen_action)
+            if self.problem.is_goal(self.state):
+                return [self.solution]
+        return []
     
 class StochasticHillClimbing(HillClimbing):
-    def __init__(self, problem: SearchProblem, max_iter: int = 1000, p: Callable = lambda x: 0.5):
-        """
-        Initialize the stochastic hill climbing search algorithm with the given problem, maximum number of iterations, and probability function.
-        """
+    def __init__(self, problem: HeuristicSearchProblem, max_iter: int = 1000, p: Callable = lambda x: 1 if x < 0 else 0.1) -> None:
         super().__init__(problem, max_iter)
         self.p = p
         
-    def climb(self, actions: list[Action]) -> tuple[Action, bool]:
+    def climb(self, actions: list[Action]) -> Action:
         action = random.choice(actions)
-        slope = self.problem.heuristic(self.problem.result(self.state, action)) - self.problem.heuristic(self.state)
-        if slope >= 0:
-            prob = self.p(slope)
-            if random.random() > prob:
-                print(f"reject: {slope}")
-                action = None
-        return action, False
+        h_before = self.problem.heuristic(self.state)
+        h_after = self.problem.heuristic(self.problem.result(self.state.__copy__(), action))
+        slope = h_after - h_before
+        prob = self.p(slope)
+        if random.random() < prob:
+            return action
+        else:
+            return Action.STAY
     
 class FirstChoiceHillClimbing(StochasticHillClimbing):
-    def __init__(self, problem: SearchProblem, max_iter: int = 1000):
-        """
-        Initialize the first-choice hill climbing search algorithm with the given problem and maximum number of iterations.
-        """
-        super().__init__(problem, max_iter, p=lambda x: 1 if x > 0 else 0)
+    def __init__(self, problem: HeuristicSearchProblem, max_iter: int = 1000) -> None:
+        super().__init__(problem, max_iter, p=lambda x: 1 if x < 0 else 0)
         
 class SimulatedAnnealing(StochasticHillClimbing):
-    def __init__(self, problem: SearchProblem, max_iter: int = 1000, T_0: float = 1.0, alpha: float = 0.9):
-        """
-        Initialize the simulated annealing search algorithm with the given problem, maximum number of iterations, probability function, and temperature.
-        """
+    def __init__(self, problem: HeuristicSearchProblem, max_iter: int = 1000, T_0: float = 1.0, alpha: float = 0.9) -> None:
         super().__init__(problem, max_iter, self.p)
         self.T_0 = T_0
         self.T = self.T_0
         self.alpha = alpha
         
     def p(self, slope: float) -> float:
-        p_annealing = 1 if slope > 0 else 1/(1 + exp(-slope/self.T))
+        p_annealing = 1 if slope < 0 else 1/(1 + exp(slope/self.T))
         self.T = self.T_0 * self.alpha
         return p_annealing
         
 class RandomRestart(LocalSearch):
-    """Restart at different random initial states to avoid local optima.
-    
-    This class represents a random restart algorithm that restarts the search process at different random initial states in order to avoid getting stuck in local optima. It inherits from the `LocalSearch` class.
-    
-    Attributes:
-        problem (SearchProblem): The problem to solve.
-        algorithm (LocalSearch): The search algorithm to use in each restart.
-        max_iter (int): The maximum number of iterations in each restart.
-        max_restarts (int): The maximum number of restarts.
-    
-    Methods:
-        __init__(self, problem: SearchProblem, algorithm: LocalSearch, max_iter: int = 1000, max_restarts: int = 10)
-        search(self) -> Optional[State]
-    """
-    def __init__(self, problem: SearchProblem, algorithm: LocalSearch, max_iter: int = 1000, max_restarts: int = 10):
-        """
-        Initialize a RandomRestart object.
-        
-        Args:
-            problem (SearchProblem): The problem to solve.
-            algorithm (LocalSearch): The search algorithm to use in each restart.
-            max_iter (int, optional): The maximum number of iterations in each restart. Defaults to 1000.
-            max_restarts (int, optional): The maximum number of restarts. Defaults to 10.
-        """
+    def __init__(self, problem: HeuristicSearchProblem, algorithm: Type[LocalSearch], max_iter: int = 1000, max_restarts: int = 10):
         super().__init__(problem, max_iter)
         self.max_restarts = max_restarts
         self.algorithm = algorithm
-        self.algorithm.max_iter = max_iter
+        self.solutions: List[List[Action]] = []
         
-    def search(self) -> Optional[State]:
-        """
-        Execute a random restart on a certain search algorithm to find a solution to the given problem.
-        
-        Returns:
-            Optional[State]: The final state if a goal state is found, otherwise None.
-        
-        Raises:
-            ValueError: If the problem of the algorithm is different from the problem of the search.
-        """
-        if self.problem != self.algorithm.problem:
-            raise ValueError("The problem of the algorithm must be the same as the problem of the search.")
-
+    def search(self) -> List[List[Action]]:
         for _ in range(self.max_restarts):
-            self.algorithm.state = self.problem.initial_state()
-            self.algorithm.cost = 0
-            self.algorithm.search()
-            if self.problem.is_goal(self.algorithm.state) and self.algorithm.cost < self.cost:
-                self.state = self.algorithm.state
-                self.cost = self.algorithm.cost
-                
-        return self.state if self.problem.is_goal(self.state) else None
+            search = self.algorithm(self.problem, self.max_iter)
+            solutions = search.search()
+            if len(solutions) > 0:
+                self.solutions.append(solutions)
+        return self.solutions
     
-class LocalBeamSearch(LocalSearch):
-    def __init__(self, problem: SearchProblem, k:int=8, max_iter: int = 1000):
-        """
-        Initialize the local beam search algorithm with the given problem, number of states to keep, and maximum number of iterations.
-        """
-        super().__init__(problem, max_iter)
-        self.k = k
-        self.states = [problem.initial_state() for _ in range(k)]
+# class LocalBeamSearch(LocalSearch):
+#     def __init__(self, problem: HeuristicSearchProblem, k:int=8, max_iter: int = 1000):
+#         """
+#         Initialize the local beam search algorithm with the given problem, number of states to keep, and maximum number of iterations.
+#         """
+#         super().__init__(problem, max_iter)
+#         self.k = k
+#         self.states = [problem.initial_state() for _ in range(k)]
         
-    def search(self) -> Optional[State]:
-        """
-        Execute a local beam search algorithm to find a solution to the given problem.
-        Returns a solution or indicates failure.
-        """
-        for _ in range(self.max_iter):
-            new_states = []
-            for state in self.states:
-                actions = self.problem.actions(state)
-                if not actions:
-                    break
-                new_states.extend([self.problem.result(state, action) for action in actions])
-            self.states = sorted(new_states, key=lambda x: self.problem.heuristic(x))[:self.k]
-            if any(self.problem.is_goal(state) for state in self.states):
-                self.state = next(filter(lambda x: self.problem.is_goal(x), self.states))
-                return state
-        return None
+#     def search(self) -> List[List[Action]]:
+#         """
+#         Execute a local beam search algorithm to find a solution to the given problem.
+#         Returns a solution or indicates failure.
+#         """
+#         for _ in range(self.max_iter):
+#             new_states = []
+#             for state in self.states:
+#                 actions = self.problem.actions(state)
+#                 if not actions:
+#                     return []
+#                 new_states.extend([self.problem.result(state, action) for action in actions])
+#             self.states = sorted(new_states, key=lambda x: self.problem.heuristic(x))[:self.k]
+#             if any(self.problem.is_goal(state) for state in self.states):
+#                 self.state = next(filter(lambda x: self.problem.is_goal(x), self.states))
+#                 return state
+#         return None
 
-class GeneticAlgorithm(LocalSearch):
-    def __init__(self, problem: SearchProblem, max_iter: int = 1000, pop_size: int = 100, mutation_rate: float = 0.1):
-        """
-        Initialize the genetic algorithm with the given problem, maximum number of iterations, population size, and mutation rate.
-        """
-        super().__init__(problem, max_iter)
-        self.pop_size = pop_size
-        self.mutation_rate = mutation_rate
-        self.population = [problem.initial_state() for _ in range(pop_size)]
+# class GeneticAlgorithm(LocalSearch):
+#     def __init__(self, problem: HeuristicSearchProblem, max_iter: int = 1000, pop_size: int = 100, mutation_rate: float = 0.1):
+#         """
+#         Initialize the genetic algorithm with the given problem, maximum number of iterations, population size, and mutation rate.
+#         """
+#         super().__init__(problem, max_iter)
+#         self.pop_size = pop_size
+#         self.mutation_rate = mutation_rate
+#         self.population = [problem.initial_state() for _ in range(pop_size)]
         
-    def transcribe(self, state: State) -> str:
-        pass
+#     def transcribe(self, state: State) -> str:
+#         pass
     
-    def revtranscribe(self, string: str) -> State:
-        pass
+#     def revtranscribe(self, string: str) -> State:
+#         pass
     
-    def crossover(self, parent1: State, parent2: State) -> State:
-        """
-        Execute a crossover operation on two parent states to return a child state.
-        """
-        raise NotImplementedError("Crossover operation not implemented.")
+#     def crossover(self, parent1: State, parent2: State) -> State:
+#         """
+#         Execute a crossover operation on two parent states to return a child state.
+#         """
+#         raise NotImplementedError("Crossover operation not implemented.")
         
-    def mutate(self, state: State) -> State:
-        """
-        Execute a mutation operation on a state to return a mutated state.
-        """
-        raise NotImplementedError("Mutation operation not implemented.")
+#     def mutate(self, state: State) -> State:
+#         """
+#         Execute a mutation operation on a state to return a mutated state.
+#         """
+#         raise NotImplementedError("Mutation operation not implemented.")
         
-    def search(self) -> Optional[State]:
-        """
-        Execute a genetic algorithm to find a solution to the given problem.
-        Returns a solution or indicates failure.
-        """
-        for _ in range(self.max_iter):
-            new_population = []
-            for _ in range(self.pop_size):
-                parent1 = random.choice(self.population)
-                parent2 = random.choice(self.population)
-                child = self.crossover(parent1, parent2)
-                if random.random() < self.mutation_rate:
-                    child = self.mutate(child)
-                new_population.append(child)
-            self.population = new_population
-            if any(self.problem.is_goal(state) for state in self.population):
-                self.state = next(filter(lambda x: self.problem.is_goal(x), self.population))
-                return True
-        return False
+#     def search(self) -> Optional[State]:
+#         """
+#         Execute a genetic algorithm to find a solution to the given problem.
+#         Returns a solution or indicates failure.
+#         """
+#         for _ in range(self.max_iter):
+#             new_population = []
+#             for _ in range(self.pop_size):
+#                 parent1 = random.choice(self.population)
+#                 parent2 = random.choice(self.population)
+#                 child = self.crossover(parent1, parent2)
+#                 if random.random() < self.mutation_rate:
+#                     child = self.mutate(child)
+#                 new_population.append(child)
+#             self.population = new_population
+#             if any(self.problem.is_goal(state) for state in self.population):
+#                 self.state = next(filter(lambda x: self.problem.is_goal(x), self.population))
+#                 return True
+#         return False
     
-class LRTSAStar(LocalSearch):
-    ''' Learning Real-time A* Algorithm '''
-    def __init__(self, problem: HeuristicSearchProblem, max_iter: int = 100000, pop_size: int = 100, mutation_rate: float = 0.1):
-        super().__init__(problem, max_iter)
-        self.approx_costs = {}
+# class LRTSAStar(LocalSearch):
+#     ''' Learning Real-time A* Algorithm '''
+#     def __init__(self, problem: HeuristicSearchProblem, max_iter: int = 100000, pop_size: int = 100, mutation_rate: float = 0.1):
+#         super().__init__(problem, max_iter)
+#         self.approx_costs = {}
         
-    def approx_h(self, state: State) -> int:
-        if state not in self.approx_costs:
-            self.approx_costs[state] = problem.heuristic(state)
-        return self.approx_costs[state]
+#     def approx_h(self, state: State) -> int:
+#         if state not in self.approx_costs:
+#             self.approx_costs[state] = problem.heuristic(state)
+#         return self.approx_costs[state]
         
-    def search(self) -> Optional[State]:
-        for _ in range(self.max_iter):
-            if self.problem.is_goal(self.state):
-                return self.state
-            actions = self.problem.actions(self.state)
-            if not actions:
-                return None
-            action = min(actions, key=lambda n: self.approx_h(self.problem.result(self.state, n)))
-            self.state = self.problem.result(self.state, action)
-            self.approx_costs[self.state] += self.state.cost
-        return self.state if self.problem.is_goal(self.state) else None
+#     def search(self) -> Optional[State]:
+#         for _ in range(self.max_iter):
+#             if self.problem.is_goal(self.state):
+#                 return self.state
+#             actions = self.problem.actions(self.state)
+#             if not actions:
+#                 return None
+#             action = min(actions, key=lambda n: self.approx_h(self.problem.result(self.state, n)))
+#             self.state = self.problem.result(self.state, action)
+#             self.approx_costs[self.state] += self.state.cost
+#         return self.state if self.problem.is_goal(self.state) else None
     
 if __name__ == '__main__':
-    from ExampleProblem import EightQueens
-    problem = EightQueens(8)
-    algo = LRTSAStar(problem)
-    print(algo.search())
+    pass

@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List
+from enum import Enum, auto
 
 class State(ABC):
     '''
@@ -23,17 +24,8 @@ class State(ABC):
     def __eq__(self, other):
         return self.__hash__() == other.__hash__()
     
-class Action(ABC):
-    '''
-    
-    '''
-    @abstractmethod
-    def __hash__(self):
-        pass
-    
-    @abstractmethod
-    def __eq__(self, other):
-        return self.__hash__() == other.__hash__()
+class Action(Enum):
+    STAY = auto()
 
 class SearchProblem(ABC):
     """
@@ -53,14 +45,14 @@ class SearchProblem(ABC):
         pass
 
     @abstractmethod
-    def actions(self, state: State) -> list:
+    def actions(self, state: State) -> List[Action]:
         """Return a list of actions that can be executed in the given state."""
         pass
 
     @abstractmethod
     def result(self, state: State, action: Action) -> State:
         """Return the state that results from executing a given action in the given state."""
-        if not action:
+        if action == Action.STAY:
             return state
         pass
 
@@ -89,20 +81,3 @@ class HeuristicSearchProblem(SearchProblem):
     def heuristic(self, state: State) -> float:
         """Return the heuristic value of the given state."""
         pass
-    
-class UncertainSearchProblem(SearchProblem):
-    @abstractmethod
-    def result(self, state: State, action: Action) -> List[tuple[State, float]]:
-        pass
-    
-class GameState(State):
-    @abstractmethod
-    def __init__(self, cost: int = 0, to_move: str = None):
-        super().__init__(cost)
-        self.to_move = to_move
-        
-class GameAction(Action):
-    @abstractmethod
-    def __init__(self, cost: int = 0, player: str = None):
-        super().__init__(cost)
-        self.player = player
