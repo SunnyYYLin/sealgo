@@ -1,52 +1,58 @@
-# from sealgo.sealgo_pkg.Search import Search
-# from Problem import SearchProblem, HeuristicSearchProblem, State, Action
-# from abc import abstractmethod
-# from queue import PriorityQueue, Queue, LifoQueue
+from sealgo.sealgo_pkg.Search import Search
+from .Problem import SearchProblem, HeuristicSearchProblem, State, Action
+from abc import abstractmethod
+from queue import PriorityQueue, Queue, LifoQueue
+from typing import List, Type, Callable
 
-# class BestFirstSearch(Search):
-#     def __init__(self, problem:SearchProblem, eval_f = lambda x: x.cost, qtype = PriorityQueue):
-#         '''
-#         '''
-#         super().__init__(problem)
-#         self.reached = {}
-#         self.qtype = qtype
-#         self.frontier = self.qtype()
-#         self.eval_f = eval_f
-#         init = problem.initial_state()
-#         if qtype == Queue or qtype == LifoQueue:
-#             self.frontier.put(init)
-#         elif qtype == PriorityQueue:
-#             self.frontier.put((self.eval_f(init), init))
-#         else:
-#             raise ValueError('Invalid queue type.')
+class BestFirstSearch(Search):
+    def __init__(self, problem:SearchProblem, eval_f: Callable = lambda x: x.cost, 
+                 qtype: Type[PriorityQueue]|Type[Queue]|Type[LifoQueue]= PriorityQueue) -> None:
+        self.problem = problem
+        self.qtype = qtype
+        self.frontier = self.qtype()
+        self.eval_f = eval_f
+        init = problem.initial_state()
+        self.predecessors = {init: (None, Action.STAY)}
+        if qtype == Queue or qtype == LifoQueue:
+            self.frontier.put(init)
+        elif qtype == PriorityQueue:
+            self.frontier.put((self.eval_f(init), init))
+        else:
+            raise ValueError('Invalid queue type.')
         
-#     def search(self, only_one = True):
-#         if not only_one:
-#             goals = []
-#         while not self.frontier.empty():
-#             if self.qtype == PriorityQueue:
-#                 state = self.frontier.get()[1]
-#             else:
-#                 state = self.frontier.get()
-#             if self.problem.is_goal(state):
-#                 if only_one:
-#                     return state
-#                 goals.append(state)
-#                 # print(f'Goal:\n{state}\n{state.cost}\n')
-#             self.reached[state] = state.cost
-#             print(f'Reached:\n{state}\n{state.cost}\n{self.eval_f(state)}\n')
-#             for action in self.problem.actions(state):
-#                 next_state = self.problem.result(state, action)
-#                 if next_state not in self.reached or next_state.cost < self.reached[next_state]:
-#                     if self.qtype == PriorityQueue:
-#                         self.frontier.put((self.eval_f(next_state), next_state))
-#                     else:
-#                         self.frontier.put(next_state)
-#         return goals
+    def search(self) -> List[List[Action]]:
+        while not self.frontier.empty():
+            # the element in PriorityQueue and Queue/LifoQueue is different.
+            if self.qtype == PriorityQueue:
+                state = self.frontier.get()[1]
+            else:
+                state = self.frontier.get()
 
-# class BFS(BestFirstSearch):
-#     def __init__(self, problem:SearchProblem):
-#         super().__init__(problem, eval_f = lambda x: x.cost, qtype = Queue)
+            if self.problem.is_goal(state):
+                return [self._reconstruct_path(state)]
+            
+            for action in self.problem.actions(state):
+                next_state = self.problem.result(state, action)
+                if next_state not in self.predecessors:
+                    self.predecessors[next_state] = (state, action)
+                    # the element in PriorityQueue and Queue/LifoQueue is different.
+                    if self.qtype == PriorityQueue:
+                        self.frontier.put((self.eval_f(next_state), next_state))
+                    else:
+                        self.frontier.put(next_state)
+        return []
+    
+    def _reconstruct_path(self, state: State) -> List[Action]:
+        actions = []
+        while state:
+            state, action = self.predecessors[state]
+            actions.append(action)
+        actions.reverse()
+        return actions
+
+class BFS(BestFirstSearch):
+    def __init__(self, problem:SearchProblem):
+        super().__init__(problem, eval_f = lambda x: x.cost, qtype = Queue)
     
 # class DFS(BestFirstSearch):
 #     def __init__(self, problem:SearchProblem, max_depth = 100):

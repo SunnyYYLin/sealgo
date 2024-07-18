@@ -5,7 +5,6 @@ from .Problem import HeuristicSearchProblem, State, Action
 import random
 from math import exp
 from typing import List, Type
-from tqdm import tqdm
 
 class LocalSearch(Search):
     @abstractmethod
@@ -25,10 +24,10 @@ class HillClimbing(LocalSearch):
     
     def climb(self, actions: list[Action]) -> Action|None:
         """Execute a hill climbing search algorithm pattern to return an action and decide whether to end."""
-        action = min(actions, key=lambda a: self.problem.heuristic(self.problem.result(self.state.__copy__(), a)))
-        print(f"From:\n{self.state}\nTo:\n{self.problem.result(self.state.__copy__(), action)}\n")
+        action = min(actions, key=lambda a: self.problem.heuristic(self.problem.result(self.state, a)))
+        print(f"From:\n{self.state}\nTo:\n{self.problem.result(self.state, action)}\n")
         h_before = self.problem.heuristic(self.state)
-        h_after = self.problem.heuristic(self.problem.result(self.state.__copy__(), action))
+        h_after = self.problem.heuristic(self.problem.result(self.state, action))
         print(f"Before: {h_before}, After: {h_after}")
         slope = h_after - h_before
         if slope >= 0:
@@ -43,7 +42,7 @@ class HillClimbing(LocalSearch):
             chosen_action = self.climb(actions)
             if not chosen_action:
                 return []
-            print(f"Solution: {chosen_action}\nFrom:\n{self.state}To:\n{self.problem.result(self.state.__copy__(), chosen_action)}\n")
+            print(f"Solution: {chosen_action}\nFrom:\n{self.state}To:\n{self.problem.result(self.state, chosen_action)}\n")
             self.state = self.problem.result(self.state, chosen_action)
             self.solution.append(chosen_action)
             if self.problem.is_goal(self.state):
@@ -51,14 +50,37 @@ class HillClimbing(LocalSearch):
         return []
     
 class StochasticHillClimbing(HillClimbing):
+    """
+    Stochastic Hill Climbing algorithm for heuristic search problems.
+    
+    Args:
+        problem (HeuristicSearchProblem): The heuristic search problem to solve.
+        max_iter (int): The maximum number of iterations (default: 1000).
+        p (Callable): The probability function to determine whether to accept a worse move (default: lambda x: 1 if x < 0 else 0.1).
+    
+    Attributes:
+        p (Callable): The probability function to determine whether to accept a worse move.
+    
+    Methods:
+        climb(actions: list[Action]) -> Action: Selects an action to climb based on the stochastic hill climbing algorithm.
+    """
     def __init__(self, problem: HeuristicSearchProblem, max_iter: int = 1000, p: Callable = lambda x: 1 if x < 0 else 0.1) -> None:
         super().__init__(problem, max_iter)
         self.p = p
         
     def climb(self, actions: list[Action]) -> Action:
+        """
+        Selects an action to climb based on the stochastic hill climbing algorithm.
+        
+        Args:
+            actions (list[Action]): The available actions to choose from.
+        
+        Returns:
+            Action: The selected action to climb.
+        """
         action = random.choice(actions)
         h_before = self.problem.heuristic(self.state)
-        h_after = self.problem.heuristic(self.problem.result(self.state.__copy__(), action))
+        h_after = self.problem.heuristic(self.problem.result(self.state, action))
         slope = h_after - h_before
         prob = self.p(slope)
         if random.random() < prob:
@@ -78,7 +100,7 @@ class SimulatedAnnealing(StochasticHillClimbing):
         self.alpha = alpha
         
     def p(self, slope: float) -> float:
-        p_annealing = 1 if slope < 0 else 1/(1 + exp(slope/self.T))
+        p_annealing = 1 if slope < 0 else exp(-slope/self.T)
         self.T = self.T_0 * self.alpha
         return p_annealing
         
