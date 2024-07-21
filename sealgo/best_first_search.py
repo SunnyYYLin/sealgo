@@ -1,8 +1,8 @@
-from sealgo.sealgo.Search import Search
-from .Problem import SearchProblem, HeuristicSearchProblem, State, Action
-from abc import abstractmethod
 from queue import PriorityQueue, Queue, LifoQueue
-from typing import List, Type, Callable
+from typing import List
+
+from .search import Search
+from .problem import *
 
 class BestFirstSearch(Search):
     def __init__(self, problem:SearchProblem) -> None:
@@ -107,36 +107,32 @@ class AStar(BestFirstSearch):
             return self.problem.action_cost(state, action) + weight * self.problem.heuristic(state)
         self.eval_f = eval_f
         
-# class BiBFS(Search):
-#     def __init__(self, problem:BiSearchProblem):
-#         self.problem = problem
-#         self.f_frontier = PriorityQueue()
-#         self.b_frontier = PriorityQueue()
-#         self.predecessors = {self.problem.initial_state(): (None, Action.STAY)}
-#         self.successors = {goal_state: (None, Action.STAY)}
-#         self.f_frontier.put((0, self.problem.initial_state()))
-#         self.b_frontier.put((0, goal_state))
+class BiBFS(Search):
+    def __init__(self, problem:BiSearchProblem):
+        self.problem = problem
+        self.f_frontier = PriorityQueue()
+        self.b_frontier = PriorityQueue()
+        self.predecessors = {self.problem.initial_state(): (None, Action.STAY)}
+        goal_states = self.problem.goal_states()
+        self.successors = {state: (None, Action.STAY) for state in goal_states}
+        self.f_frontier.put((0, self.problem.initial_state()))
+        for state in goal_states:
+            self.b_frontier.put((0, state))
         
-#     def search(self) -> List[List[Action]]:
-#         while not self.f_frontier.empty() and not self.b_frontier.empty():
-#             f_state = self.f_frontier.get()[1]
-#             b_state = self.b_frontier.get()[1]
-#             if b_state in self.predecessors:
-#                 return self._reconstruct_path(f_state) + self._reconstruct_path(b_state)
-#             for action in self.problem.actions(f_state):
-#                 next_state = self.problem.result(f_state, action)
-#                 if next_state not in self.predecessors:
-#                     self.predecessors[next_state] = (f_state, action)
-#                     self.f_frontier.put((1, next_state))
-#             for action in self.problem.actions(b_state):
-#                 next_state = self.problem.result(b_state, action)
-#                 if next_state not in self.successors:
-#                     self.successors[next_state] = (b_state, action)
-#                     self.b_frontier.put((1, next_state))
-#         return []
-    
-# if __name__ == '__main__':
-#     from ExampleProblem import EightQueens
-#     problem = EightQueens(8)
-#     algo = DFS(problem)
-#     print(algo.search())
+    def search(self) -> List[List[Action]]:
+        while not self.f_frontier.empty() and not self.b_frontier.empty():
+            f_state = self.f_frontier.get()[1]
+            b_state = self.b_frontier.get()[1]
+            if b_state in self.predecessors:
+                return self._reconstruct_path(f_state) + self._reconstruct_path(b_state)
+            for action in self.problem.actions(f_state):
+                next_state = self.problem.result(f_state, action)
+                if next_state not in self.predecessors:
+                    self.predecessors[next_state] = (f_state, action)
+                    self.f_frontier.put((1, next_state))
+            for action in self.problem.actions(b_state):
+                next_state = self.problem.result(b_state, action)
+                if next_state not in self.successors:
+                    self.successors[next_state] = (b_state, action)
+                    self.b_frontier.put((1, next_state))
+        return []

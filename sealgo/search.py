@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
-from .Problem import SearchProblem, Action
 from typing import List
+
+from .problem import SearchProblem, Action
 
 class Search(ABC):
     @abstractmethod
@@ -9,8 +10,4 @@ class Search(ABC):
     
     @abstractmethod
     def search(self) -> List[List[Action]]:
-        """
-        Execute an uninformed search algorithm to find a solution to the given problem.
-        Returns a solution or indicates failure.
-        """
         pass

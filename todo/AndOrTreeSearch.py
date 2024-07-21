@@ -1,8 +1,9 @@
 from abc import abstractmethod
-from sealgo.sealgo.Search import Search
-from Problem import UncertainSearchProblem, State, Action
 import diagrams as diag
 from typing import Optional, List
+
+from .search import Search
+from .problem import UncertainSearchProblem, State, Action
     
 class AndOrTreeSearch:
     def __init__(self, problem: UncertainSearchProblem):
@@ -49,7 +50,7 @@ class AndOrTreeSearch:
         return plan_all[0] if plan_all else None
     
 if __name__ == '__main__':
-    from ExampleProblem import RobotSearchProblem
+    from todo.tictactoe import RobotSearchProblem
     problem = RobotSearchProblem()
     search = AndOrTreeSearch(problem)
     print(search.search())

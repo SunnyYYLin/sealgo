@@ -1,10 +1,10 @@
 from abc import abstractmethod
-from collections.abc import Callable
-from .Search import Search
-from .Problem import HeuristicSearchProblem, State, Action
 import random
 from math import exp
-from typing import List, Type
+from typing import List, Type, Callable
+
+from .search import Search
+from .problem import HeuristicSearchProblem, Action
 
 class LocalSearch(Search):
     @abstractmethod
@@ -119,6 +119,7 @@ class RandomRestart(LocalSearch):
                 self.solutions.append(solutions)
         return self.solutions
     
+# TODO
 # class LocalBeamSearch(LocalSearch):
 #     def __init__(self, problem: HeuristicSearchProblem, k:int=8, max_iter: int = 1000):
 #         """
@@ -216,6 +217,3 @@ class RandomRestart(LocalSearch):
 #             self.state = self.problem.result(self.state, action)
 #             self.approx_costs[self.state] += self.state.cost
 #         return self.state if self.problem.is_goal(self.state) else None
-    
-if __name__ == '__main__':
-    pass
