@@ -81,3 +81,12 @@ class HeuristicSearchProblem(SearchProblem):
     def heuristic(self, state: State) -> float:
         """Return the heuristic value of the given state."""
         pass
+    
+class BiSearchProblem(SearchProblem):
+    @abstractmethod
+    def actions_to(self, state: State) -> List[Action]:
+        pass
+    
+    @abstractmethod
+    def result_from(self, state: State, action: Action) -> State:
+        pass

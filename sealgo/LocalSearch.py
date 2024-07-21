@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from collections.abc import Callable
-from sealgo.sealgo_pkg.Search import Search
+from .Search import Search
 from .Problem import HeuristicSearchProblem, State, Action
 import random
 from math import exp

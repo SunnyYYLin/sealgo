@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from sealgo.sealgo_pkg.Search import Search
+from sealgo.sealgo.Search import Search
 from Problem import UncertainSearchProblem, State, Action
 import diagrams as diag
 from typing import Optional, List
