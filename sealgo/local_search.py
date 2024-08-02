@@ -10,9 +10,13 @@ class LocalSearch(Search):
     @abstractmethod
     def __init__(self, problem: HeuristicSearchProblem, max_iter: int = 1000) -> None:
         self.problem = problem
-        self.state = problem.initial_state()
-        self.solution: List[Action] = []
         self.max_iter = max_iter
+        self._init()
+        
+    def _init(self) -> None:
+        self.state = self.problem.initial_state()
+        self.solution = []
+        self.cost = 0
         
     @abstractmethod
     def search(self) -> List[List[Action]]:
@@ -22,32 +26,39 @@ class HillClimbing(LocalSearch):
     def __init__(self, problem: HeuristicSearchProblem, max_iter: int = 1000) -> None:
         super().__init__(problem, max_iter)
     
+    def search(self) -> List[List[Action]]:
+        solutions = []
+        for _ in range(self.max_iter):
+            actions = self.problem.actions(self.state)
+            if not actions:
+                self._init()
+                continue
+            chosen_action = self.climb(actions)
+            if not chosen_action:
+                self._init()
+                continue
+            # print(f"Solution: {chosen_action}\nFrom:\n{self.state}To:\n{self.problem.result(self.state, chosen_action)}\n")
+            self.state = self.problem.result(self.state, chosen_action)
+            self.cost += self.problem.action_cost(self.state, chosen_action)
+            self.solution.append(chosen_action)
+            if self.problem.is_goal(self.state):
+                if self.solution not in solutions:
+                    solutions.append(self.solution)
+                self._init()
+                continue
+        return solutions
+    
     def climb(self, actions: list[Action]) -> Action|None:
         """Execute a hill climbing search algorithm pattern to return an action and decide whether to end."""
         action = min(actions, key=lambda a: self.problem.heuristic(self.problem.result(self.state, a)))
-        print(f"From:\n{self.state}\nTo:\n{self.problem.result(self.state, action)}\n")
+        # print(f"From:\n{self.state}\nTo:\n{self.problem.result(self.state, action)}\n")
         h_before = self.problem.heuristic(self.state)
         h_after = self.problem.heuristic(self.problem.result(self.state, action))
-        print(f"Before: {h_before}, After: {h_after}")
+        # print(f"Before: {h_before}, After: {h_after}")
         slope = h_after - h_before
         if slope >= 0:
             return None
         return action
-    
-    def search(self) -> List[List[Action]]:
-        for _ in range(self.max_iter):
-            actions = self.problem.actions(self.state)
-            if not actions:
-                return []
-            chosen_action = self.climb(actions)
-            if not chosen_action:
-                return []
-            print(f"Solution: {chosen_action}\nFrom:\n{self.state}To:\n{self.problem.result(self.state, chosen_action)}\n")
-            self.state = self.problem.result(self.state, chosen_action)
-            self.solution.append(chosen_action)
-            if self.problem.is_goal(self.state):
-                return [self.solution]
-        return []
     
 class StochasticHillClimbing(HillClimbing):
     """
@@ -116,7 +127,7 @@ class RandomRestart(LocalSearch):
             search = self.algorithm(self.problem, self.max_iter)
             solutions = search.search()
             if len(solutions) > 0:
-                self.solutions.append(solutions)
+                self.solutions += solutions
         return self.solutions
     
 # TODO

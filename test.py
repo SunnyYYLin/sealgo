@@ -1,13 +1,18 @@
-from sealgo.mcts import MCTS
 from tests.queen import EightQueens
+from sealgo.local_search import *
 import numpy as np
 
-def test_mcts(): 
-    problem = EightQueens(8)
-    mcts = MCTS(problem, time_limit=1000)
+if __name__ == '__main__':
+    # test the eight queens problem
+    problem = EightQueens()
+    state = problem.initial_state()
+    print(state)
+    actions = problem.actions(state)
+    print(actions)
+    print(problem.result(state, actions[0]))
+    print(problem.heuristic(state))
     
-    solution = mcts.search()
-    print("Solution:", solution)
-    
-if __name__ == "__main__":
-    test_mcts()
+    # test local search
+    hc = SimulatedAnnealing(problem)
+    solution = hc.search()
+    print(solution)

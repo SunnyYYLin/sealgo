@@ -1,13 +1,12 @@
 from abc import ABC, abstractmethod
-from typing import List, Generator
 from enum import Enum, auto
 
 class State(ABC):
     '''
     Represents a state in the problem domain.
 
-    Methods(must be realized in subclasses):
-        __hash__(): Computes the hash value of the state.
+    Methods:
+        __hash__(): Computes the hash value of the state (Must be realized in subclasses).
         __eq__(other): Compares the state with another state for equality.
         __lt__(other): Compares the state with another state for less than.
     ''' 
@@ -15,19 +14,26 @@ class State(ABC):
     def __hash__(self) -> int:
         pass
     
-    @abstractmethod
-    def __eq__(self, other: "State") -> bool:
-        pass
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, self.__class__) and hash(self) == hash(other)
     
-    @abstractmethod
     def __lt__(self, other: "State") -> bool:
+        return hash(self) < hash(other)
+    
+class Action(ABC):
+    """
+    Represents an action that can be taken in the problem domain.
+    """
+    STAY = 0
+    @abstractmethod
+    def __hash__(self) -> int:
         pass
     
-class Action(Enum):
-    """
-    Represents an action that can be taken in the problem domain. Must be an Enum class.
-    """
-    STAY = auto()
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, self.__class__) and hash(self) == hash(other)
+    
+    def __lt__(self, other: "Action") -> bool:
+        return hash(self) < hash(other)
 
 class SearchProblem(ABC):
     """
@@ -35,7 +41,7 @@ class SearchProblem(ABC):
     
     Methods(must be realized in subclasses):
         initial_state(self) -> State: Return the initial state from which the problem is to be solved.
-        actions(self, state: State) -> List[Action]: Return a list of actions that can be executed in the given state.
+        actions(self, state: State) -> list[Action]: Return a list of actions that can be executed in the given state.
         result(self, state: State, action: Action) -> State: Return the state that results from executing a given action in the given state.
         is_goal(self, state: State) -> bool: Check if the given state is a goal state.
         action_cost(self, s: State, action: Action) -> int|float: Return the cost of taking action from state to another state.
@@ -47,15 +53,15 @@ class SearchProblem(ABC):
         pass
 
     @abstractmethod
-    def actions(self, state: State) -> List[Action]:
+    def actions(self, state: State) -> list[Action]:
         """Return a list of actions that can be executed in the given state."""
         pass
 
     @abstractmethod
     def result(self, state: State, action: Action) -> State:
-        """Return the state that results from executing a given action in the given state."""
-        if action == Action.STAY:
-            return state
+        """Return the state that results from executing a given action in the given state.
+        If action == Action.STAY, return the same state.
+        """
         pass
 
     @abstractmethod
@@ -63,6 +69,7 @@ class SearchProblem(ABC):
         """Check if the given state is a goal state."""
         pass
 
+    @abstractmethod
     def action_cost(self, s: State, action: Action) -> int|float:
         """Return the cost of taking action from state to another state."""
         return 1
@@ -101,11 +108,11 @@ class BiSearchProblem(SearchProblem):
         b_heuristic(state: State) -> float: Returns the backward heuristic value of the given state.
     """
     @abstractmethod
-    def goal_states(self, state: State) -> List[State]:
+    def goal_states(self, state: State) -> list[State]:
         pass
     
     @abstractmethod
-    def actions_to(self, state: State) -> List[Action]:
+    def actions_to(self, state: State) -> list[Action]:
         pass
     
     @abstractmethod
