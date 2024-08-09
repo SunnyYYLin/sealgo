@@ -24,7 +24,6 @@ class Action(ABC):
     """
     Represents an action that can be taken in the problem domain.
     """
-    STAY = 0
     @abstractmethod
     def __hash__(self) -> int:
         pass
@@ -34,6 +33,12 @@ class Action(ABC):
     
     def __lt__(self, other: "Action") -> bool:
         return hash(self) < hash(other)
+    
+class Stay(Action):
+    def __hash__(self) -> int:
+        return 0
+    
+STAY = Stay()
 
 class SearchProblem(ABC):
     """

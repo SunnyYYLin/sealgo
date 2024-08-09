@@ -1,12 +1,11 @@
 from abc import abstractmethod
 import random
-from math import exp
+from math import exp, tanh
 from typing import List, Type, Callable
 
-from .search import Search
 from .problem import HeuristicSearchProblem, Action
 
-class LocalSearch(Search):
+class LocalSearch():
     @abstractmethod
     def __init__(self, problem: HeuristicSearchProblem, max_iter: int = 1000) -> None:
         self.problem = problem
@@ -15,8 +14,8 @@ class LocalSearch(Search):
         
     def _init(self) -> None:
         self.state = self.problem.initial_state()
-        self.solution = []
-        self.cost = 0
+        self.solution: list[Action] = []
+        self.cost: int|float = 0
         
     @abstractmethod
     def search(self) -> List[List[Action]]:
@@ -35,9 +34,8 @@ class HillClimbing(LocalSearch):
                 continue
             chosen_action = self.climb(actions)
             if not chosen_action:
-                self._init()
                 continue
-            # print(f"Solution: {chosen_action}\nFrom:\n{self.state}To:\n{self.problem.result(self.state, chosen_action)}\n")
+            # print(f"Solution: {chosen_action}\nFrom:\n{self.state}\nTo:\n{self.problem.result(self.state, chosen_action)}\n")
             self.state = self.problem.result(self.state, chosen_action)
             self.cost += self.problem.action_cost(self.state, chosen_action)
             self.solution.append(chosen_action)
@@ -67,19 +65,21 @@ class StochasticHillClimbing(HillClimbing):
     Args:
         problem (HeuristicSearchProblem): The heuristic search problem to solve.
         max_iter (int): The maximum number of iterations (default: 1000).
-        p (Callable): The probability function to determine whether to accept a worse move (default: lambda x: 1 if x < 0 else 0.1).
+        p (Callable): The probability function to determine whether to accept a move (default: lambda x: 1 if x < 0 else 0.1).
     
     Attributes:
-        p (Callable): The probability function to determine whether to accept a worse move.
+        p (Callable): The probability function to determine whether to accept a move.
     
     Methods:
         climb(actions: list[Action]) -> Action: Selects an action to climb based on the stochastic hill climbing algorithm.
     """
-    def __init__(self, problem: HeuristicSearchProblem, max_iter: int = 1000, p: Callable = lambda x: 1 if x < 0 else 0.1) -> None:
+    def __init__(self, problem: HeuristicSearchProblem, 
+                 max_iter: int = 1000, 
+                 p: Callable[[int|float], float] = lambda s : 0.5*(1+tanh(-s))) -> None:
         super().__init__(problem, max_iter)
         self.p = p
         
-    def climb(self, actions: list[Action]) -> Action:
+    def climb(self, actions: list[Action]) -> Action|None:
         """
         Selects an action to climb based on the stochastic hill climbing algorithm.
         
@@ -97,14 +97,14 @@ class StochasticHillClimbing(HillClimbing):
         if random.random() < prob:
             return action
         else:
-            return Action.STAY
+            return None
     
 class FirstChoiceHillClimbing(StochasticHillClimbing):
     def __init__(self, problem: HeuristicSearchProblem, max_iter: int = 1000) -> None:
         super().__init__(problem, max_iter, p=lambda x: 1 if x < 0 else 0)
         
 class SimulatedAnnealing(StochasticHillClimbing):
-    def __init__(self, problem: HeuristicSearchProblem, max_iter: int = 1000, T_0: float = 1.0, alpha: float = 0.9) -> None:
+    def __init__(self, problem: HeuristicSearchProblem, max_iter: int = 1000, T_0: float = 100.0, alpha: float = 0.9) -> None:
         super().__init__(problem, max_iter, self.p)
         self.T_0 = T_0
         self.T = self.T_0
@@ -112,19 +112,28 @@ class SimulatedAnnealing(StochasticHillClimbing):
         
     def p(self, slope: float) -> float:
         p_annealing = 1 if slope < 0 else exp(-slope/self.T)
-        self.T = self.T_0 * self.alpha
+        self.T *= self.alpha
         return p_annealing
         
 class RandomRestart(LocalSearch):
-    def __init__(self, problem: HeuristicSearchProblem, algorithm: Type[LocalSearch], max_iter: int = 1000, max_restarts: int = 10):
+    def __init__(self, problem: HeuristicSearchProblem, 
+                 algorithm: Type[LocalSearch], 
+                 max_iter: int = 1000,
+                 max_restarts: int = 10, 
+                 *args, **kwargs):
         super().__init__(problem, max_iter)
         self.max_restarts = max_restarts
         self.algorithm = algorithm
         self.solutions: List[List[Action]] = []
+        self.args = args
+        self.kwargs = kwargs
         
     def search(self) -> List[List[Action]]:
         for _ in range(self.max_restarts):
-            search = self.algorithm(self.problem, self.max_iter)
+            if self.args:
+                search = self.algorithm(self.problem, self.max_iter, self.args, self.kwargs)
+            else:
+                search = self.algorithm(self.problem, self.max_iter)
             solutions = search.search()
             if len(solutions) > 0:
                 self.solutions += solutions

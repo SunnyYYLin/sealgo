@@ -34,14 +34,14 @@ class QAction(Action):
     def __str__(self) -> str:
         return f"Queen at row {self.row} move onto {self.to_column}\n"
     
-class EightQueens(HeuristicSearchProblem):
+class EightQueens(HeuristicSearchProblem): # type: ignore
     def __init__(self, n: int = 8):
         self.scale = n
         
     def initial_state(self) -> QState:
         return QState(random.randint(0, self.scale-1) for _ in range(self.scale))
     
-    def actions(self, state: QState) -> list[QAction]: # type: ignore
+    def actions(self, state: QState) -> list[QAction]:
         return [QAction(i, j) for i, j in 
                 itertools.product(range(self.scale), range(self.scale)) if j != state[i]]
     
